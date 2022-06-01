@@ -1,0 +1,3 @@
+[submodule "wrf-python"]
+	path = wrf-python
+	url = https://github.com/NCAR/wrf-python
