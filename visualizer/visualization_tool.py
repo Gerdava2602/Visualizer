@@ -1,8 +1,5 @@
-# Interface libraries
-from tkinter import *
-from PIL import ImageTk, Image
+import streamlit as st
 
-#Data management libraries
 from matplotlib.cm import get_cmap
 from mpl_toolkits.basemap import Basemap
 from wrf import to_np, getvar, smooth2d, latlon_coords, get_basemap, enable_basemap
@@ -13,16 +10,24 @@ from netCDF4 import Dataset as NetCDFFile
 
 import os
 
-root = Tk()
-root.title('Visualizer')
-root.geometry("500x300")
-root.resizable(False,False)
+st.set_page_config(page_title='Visualization tool',
+                   page_icon=':bar_chart:',
+                   layout='wide')
+
+st.set_option('deprecation.showPyplotGlobalUse', False)
+
+def get_data():
+    cur_path = os.path.dirname(__file__)
+    new_path = os.path.relpath('..\\data\\original_0_4.nc', cur_path)
+    data = NetCDFFile(new_path)
+    return data
 
 def plot(data):
-    variable = entry_variable.get()
+    variable = entry_variable
     try:
         val = getvar(data, variable)
     except:
+        print('passed')
         return
     if len(val.dims) > 2:
         val = val.isel(bottom_top=0)
@@ -44,23 +49,25 @@ def plot(data):
     # numpy arrays via to_np, or basemap crashes with an undefined RuntimeError.
     x, y = bm(to_np(lons), to_np(lats))
     # Draw the contours and filled contours
-    #bm.contour(x, y, to_np(smooth_slp), 10, colors="black")
+    bm.contour(x, y, to_np(smooth_data), 10, colors="black")
     bm.contourf(x, y, to_np(smooth_data), 10)
     # Add a color bar
     plt.colorbar(shrink=.47)
     plt.title(f"{variable} ({val.units})")
-    plt.show()
+    return fig
+
+# -- Sidebar --
+st.sidebar.header("Please Filter Here:")
+entry_variable = st.sidebar.text_input(
+    "Input the variable:"
+)
 
 
-# Get data
-cur_path = os.path.dirname(__file__)
-new_path = os.path.relpath('..\\data\\original_0_4.nc', cur_path)
-data = NetCDFFile(new_path)
+# -- main page --
+st.title(":bar_chart: Visualization tool")
+st.markdown("###")
+with st.spinner('Creating your plot...'):
+    chart = plot(get_data())
 
-entry_variable=Entry(root,text='Variable', width= 25)
-entry_variable.pack()
-
-graph_button = Button(root,text='Graph', command= lambda:plot(data))
-graph_button.pack()
-
-root.mainloop()
+content = st.columns(1)[0]
+content.pyplot(chart)
